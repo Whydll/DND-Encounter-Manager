@@ -613,7 +613,7 @@
       }
 
       .quick-damage input {
-        flex: 1;
+        flex: 1 1 120px; /* Allow shrinking */
         max-width: 150px;
       }
 
@@ -679,6 +679,76 @@
         font-size: 0.85em;
         font-weight: bold;
       }
+
+      /* --- NEW STYLES --- */
+
+      .status-effects-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-bottom: 15px;
+      }
+
+      .status-badge {
+        background: var(--danger);
+        color: white;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.8em;
+        font-weight: 600;
+      }
+
+      .creature-card .collapsible-content {
+        transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+        max-height: 2000px; /* Large max-height for expanded state */
+        overflow: hidden;
+        opacity: 1;
+      }
+
+      .creature-card.collapsed .collapsible-content {
+        max-height: 0;
+        opacity: 0;
+      }
+
+      .collapse-btn {
+        font-size: 1.2em;
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: 0 5px;
+      }
+      .collapse-btn:hover {
+        color: var(--accent);
+        background: none;
+      }
+
+      .creature-card.dragging {
+        opacity: 0.5;
+        border: 2px dashed var(--accent);
+      }
+
+      .creature-card.drag-over-top {
+        border-top: 3px solid var(--accent);
+      }
+
+      .creature-card.drag-over-bottom {
+        border-bottom: 3px solid var(--accent);
+      }
+
+      @media (max-width: 480px) {
+        .ability-scores {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .creature-title {
+          justify-content: center; /* Center badges/name on small screens */
+        }
+        .hp-control {
+          justify-content: center;
+        }
+      }
+
+      /* --- END NEW STYLES --- */
     </style>
   </head>
   <body>
@@ -937,6 +1007,15 @@
           </div>
 
           <div class="form-group" style="margin-top: 15px">
+            <label>Status Effects</label>
+            <input
+              type="text"
+              id="creatureStatusEffects"
+              placeholder="Poisoned, Prone, Stunned (comma-separated)"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
             <label>Special Traits (JSON format)</label>
             <textarea
               id="creatureTraits"
@@ -1118,6 +1197,8 @@
           reactions: [],
           notes: "",
           isDead: false,
+          isCollapsed: false, // New property
+          statusEffects: [], // New property
         };
       }
 
@@ -1171,6 +1252,8 @@
           reactions: [],
           notes: "",
           isDead: false,
+          isCollapsed: false, // New property
+          statusEffects: [], // New property
         };
       }
 
@@ -1219,6 +1302,8 @@
           reactions: [],
           notes: "",
           isDead: false,
+          isCollapsed: false, // New property
+          statusEffects: [], // New property
         };
       }
 
@@ -1333,9 +1418,8 @@
         const encounter = encounters.find((e) => e.id === currentEncounterId);
         if (!encounter) return;
 
-        const sortedCreatures = [...encounter.creatures].sort(
-          (a, b) => (b.initiative || 0) - (a.initiative || 0)
-        );
+        // REMOVED initiative sort to allow for drag-and-drop reordering
+        const sortedCreatures = [...encounter.creatures];
 
         contentArea.innerHTML = `
                 <div class="add-creature-section">
@@ -1345,14 +1429,13 @@
                     <button class="secondary" data-preset="orc">+ Orc</button>
                     <button class="secondary" data-preset="bandit">+ Bandit</button>
                 </div>
-                <div class="creature-list">
-                    ${
-                      sortedCreatures.length === 0
-                        ? '<div class="empty-state"><p>No creatures yet. Add one to get started!</p></div>'
-                        : sortedCreatures
-                            .map((creature) => renderCreatureCard(creature))
-                            .join("")
-                    }
+                <div class="creature-list" id="current-creature-list"> ${
+                  sortedCreatures.length === 0
+                    ? '<div class="empty-state"><p>No creatures yet. Add one to get started!</p></div>'
+                    : sortedCreatures
+                        .map((creature) => renderCreatureCard(creature))
+                        .join("")
+                }
                 </div>
             `;
 
@@ -1371,6 +1454,7 @@
               if (action === "edit") editCreature(creatureId);
               if (action === "delete") deleteCreature(creatureId);
               if (action === "toggle-dead") toggleDead(creatureId);
+              if (action === "toggle-collapse") toggleCollapse(creatureId); // New action
             });
           });
 
@@ -1385,6 +1469,9 @@
             applyQuickDamage(btn.dataset.creatureId);
           });
         });
+
+        // Attach new drag and drop listeners
+        attachDragAndDropListeners();
       }
 
       function renderCreatureCard(creature) {
@@ -1392,8 +1479,11 @@
         const hpClass =
           hpPercent > 50 ? "" : hpPercent > 25 ? "low" : "critical";
 
+        // MODIFIED root div for collapse, drag-and-drop
         return `
-                <div class="creature-card ${creature.isDead ? "dead" : ""}">
+                <div class="creature-card ${creature.isDead ? "dead" : ""} ${
+          creature.isCollapsed ? "collapsed" : ""
+        }" draggable="true" data-creature-id="${creature.id}">
                     <div class="creature-header">
                         <div class="creature-title">
                             <span class="creature-name">${creature.name}</span>
@@ -1418,6 +1508,12 @@
                             }</span>
                         </div>
                         <div class="creature-controls">
+                            <button class="collapse-btn" data-creature-action="toggle-collapse" data-creature-id="${
+                              creature.id
+                            }" title="${
+          creature.isCollapsed ? "Expand" : "Collapse"
+        }">${creature.isCollapsed ? "🔽" : "🔼"}</button>
+                            
                             <button class="secondary" data-creature-action="edit" data-creature-id="${
                               creature.id
                             }">✏️ Edit</button>
@@ -1433,246 +1529,265 @@
                             }">🗑️ Delete</button>
                         </div>
                     </div>
+
+                    <div class="collapsible-content"> 
                     
-                    ${
-                      creature.alignment
-                        ? `<div style="margin-bottom: 10px;"><span class="alignment-badge">${creature.alignment}</span></div>`
-                        : ""
-                    }
-                    
-                    <div class="hp-control">
-                        <button data-hp-adjust="-10" data-creature-id="${
-                          creature.id
-                        }">-10</button>
-                        <button data-hp-adjust="-5" data-creature-id="${
-                          creature.id
-                        }">-5</button>
-                        <button data-hp-adjust="-1" data-creature-id="${
-                          creature.id
-                        }">-1</button>
-                        <div class="hp-bar">
-                            <div class="hp-bar-fill ${hpClass}" style="width: ${Math.max(
+                        ${
+                          creature.alignment
+                            ? `<div style="margin-bottom: 10px;"><span class="alignment-badge">${creature.alignment}</span></div>`
+                            : ""
+                        }
+                        
+                        ${
+                          creature.statusEffects &&
+                          creature.statusEffects.length > 0
+                            ? `
+                            <div class="status-effects-list">
+                                ${creature.statusEffects
+                                  .map(
+                                    (status) =>
+                                      `<span class="status-badge">${status}</span>`
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        <div class="hp-control">
+                            <button data-hp-adjust="-10" data-creature-id="${
+                              creature.id
+                            }">-10</button>
+                            <button data-hp-adjust="-5" data-creature-id="${
+                              creature.id
+                            }">-5</button>
+                            <button data-hp-adjust="-1" data-creature-id="${
+                              creature.id
+                            }">-1</button>
+                            <div class="hp-bar">
+                                <div class="hp-bar-fill ${hpClass}" style="width: ${Math.max(
           0,
           hpPercent
         )}%"></div>
-                            <div class="hp-text">${creature.currentHp} / ${
+                                <div class="hp-text">${creature.currentHp} / ${
           creature.maxHp
         } HP ${creature.hpFormula ? `(${creature.hpFormula})` : ""}</div>
+                            </div>
+                            <button data-hp-adjust="1" data-creature-id="${
+                              creature.id
+                            }">+1</button>
+                            <button data-hp-adjust="5" data-creature-id="${
+                              creature.id
+                            }">+5</button>
+                            <button data-hp-adjust="10" data-creature-id="${
+                              creature.id
+                            }">+10</button>
                         </div>
-                        <button data-hp-adjust="1" data-creature-id="${
-                          creature.id
-                        }">+1</button>
-                        <button data-hp-adjust="5" data-creature-id="${
-                          creature.id
-                        }">+5</button>
-                        <button data-hp-adjust="10" data-creature-id="${
-                          creature.id
-                        }">+10</button>
-                    </div>
-                    
-                    <div class="quick-damage">
-                        <input type="number" id="damage-${
-                          creature.id
-                        }" placeholder="Damage/Heal" />
-                        <button data-quick-damage="true" data-creature-id="${
-                          creature.id
-                        }">Apply</button>
-                    </div>
-                    
-                    <div class="stats-grid">
-                        <div class="stat-box">
-                            <div class="stat-label">AC</div>
-                            <div class="stat-value">${creature.ac} ${
+                        
+                        <div class="quick-damage">
+                            <input type="number" id="damage-${
+                              creature.id
+                            }" placeholder="Damage/Heal" />
+                            <button data-quick-damage="true" data-creature-id="${
+                              creature.id
+                            }">Apply</button>
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-label">AC</div>
+                                <div class="stat-value">${creature.ac} ${
           creature.acType
             ? `<div style="font-size: 11px; color: var(--text-secondary);">(${creature.acType})</div>`
             : ""
         }</div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-label">Speed</div>
-                            <div class="stat-value" style="font-size: 1em;">${
-                              creature.speed || "N/A"
-                            }</div>
-                        </div>
-                    </div>
-                    
-                    <div class="ability-scores">
-                        ${renderAbilityScore(
-                          "STR",
-                          creature.str,
-                          creature.saves?.str
-                        )}
-                        ${renderAbilityScore(
-                          "DEX",
-                          creature.dex,
-                          creature.saves?.dex
-                        )}
-                        ${renderAbilityScore(
-                          "CON",
-                          creature.con,
-                          creature.saves?.con
-                        )}
-                        ${renderAbilityScore(
-                          "INT",
-                          creature.int,
-                          creature.saves?.int
-                        )}
-                        ${renderAbilityScore(
-                          "WIS",
-                          creature.wis,
-                          creature.saves?.wis
-                        )}
-                        ${renderAbilityScore(
-                          "CHA",
-                          creature.cha,
-                          creature.saves?.cha
-                        )}
-                    </div>
-                    
-                    ${
-                      creature.skills ||
-                      creature.vulnerabilities ||
-                      creature.resistances ||
-                      creature.immunities ||
-                      creature.conditionImmunities ||
-                      creature.senses ||
-                      creature.languages
-                        ? `
-                        <div class="traits-section">
-                            ${
-                              creature.skills
-                                ? `<div class="trait-group"><div class="trait-title">Skills:</div>${creature.skills}</div>`
-                                : ""
-                            }
-                            ${
-                              creature.vulnerabilities
-                                ? `<div class="trait-group"><div class="trait-title">Vulnerabilities:</div>${creature.vulnerabilities}</div>`
-                                : ""
-                            }
-                            ${
-                              creature.resistances
-                                ? `<div class="trait-group"><div class="trait-title">Resistances:</div>${creature.resistances}</div>`
-                                : ""
-                            }
-                            ${
-                              creature.immunities
-                                ? `<div class="trait-group"><div class="trait-title">Immunities:</div>${creature.immunities}</div>`
-                                : ""
-                            }
-                            ${
-                              creature.conditionImmunities
-                                ? `<div class="trait-group"><div class="trait-title">Condition Immunities:</div>${creature.conditionImmunities}</div>`
-                                : ""
-                            }
-                            ${
-                              creature.senses
-                                ? `<div class="trait-group"><div class="trait-title">Senses:</div>${creature.senses}</div>`
-                                : ""
-                            }
-                            ${
-                              creature.languages
-                                ? `<div class="trait-group"><div class="trait-title">Languages:</div>${creature.languages}</div>`
-                                : ""
-                            }
-                        </div>
-                    `
-                        : ""
-                    }
-                    
-                    ${
-                      creature.traits && creature.traits.length > 0
-                        ? `
-                        <div class="actions-section">
-                            <h4>Special Traits</h4>
-                            ${creature.traits
-                              .map(
-                                (trait) => `
-                                <div class="action-item">
-                                    <div class="action-name">${trait.name}</div>
-                                    <div>${trait.desc}</div>
-                                </div>
-                            `
-                              )
-                              .join("")}
-                        </div>
-                    `
-                        : ""
-                    }
-                    
-                    ${
-                      creature.actions && creature.actions.length > 0
-                        ? `
-                        <div class="actions-section">
-                            <h4>Actions</h4>
-                            ${creature.actions
-                              .map(
-                                (action) => `
-                                <div class="action-item">
-                                    <div class="action-name">${action.name}</div>
-                                    <div>${action.desc}</div>
-                                </div>
-                            `
-                              )
-                              .join("")}
-                        </div>
-                    `
-                        : ""
-                    }
-                    
-                    ${
-                      creature.reactions && creature.reactions.length > 0
-                        ? `
-                        <div class="actions-section">
-                            <h4>Reactions</h4>
-                            ${creature.reactions
-                              .map(
-                                (reaction) => `
-                                <div class="action-item">
-                                    <div class="action-name">${reaction.name}</div>
-                                    <div>${reaction.desc}</div>
-                                </div>
-                            `
-                              )
-                              .join("")}
-                        </div>
-                    `
-                        : ""
-                    }
-                    
-                    ${
-                      creature.legendaryActions &&
-                      creature.legendaryActions.length > 0
-                        ? `
-                        <div class="legendary-section">
-                            <h4>Legendary Actions</h4>
-                            ${creature.legendaryActions
-                              .map(
-                                (action) => `
-                                <div class="action-item">
-                                    <div class="action-name">${action.name}</div>
-                                    <div>${action.desc}</div>
-                                </div>
-                            `
-                              )
-                              .join("")}
-                        </div>
-                    `
-                        : ""
-                    }
-                    
-                    ${
-                      creature.notes
-                        ? `
-                        <div class="traits-section">
-                            <div class="trait-group">
-                                <div class="trait-title">Notes:</div>
-                                ${creature.notes}
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-label">Speed</div>
+                                <div class="stat-value" style="font-size: 1em;">${
+                                  creature.speed || "N/A"
+                                }</div>
                             </div>
                         </div>
-                    `
-                        : ""
-                    }
-                </div>
+                        
+                        <div class="ability-scores">
+                            ${renderAbilityScore(
+                              "STR",
+                              creature.str,
+                              creature.saves?.str
+                            )}
+                            ${renderAbilityScore(
+                              "DEX",
+                              creature.dex,
+                              creature.saves?.dex
+                            )}
+                            ${renderAbilityScore(
+                              "CON",
+                              creature.con,
+                              creature.saves?.con
+                            )}
+                            ${renderAbilityScore(
+                              "INT",
+                              creature.int,
+                              creature.saves?.int
+                            )}
+                            ${renderAbilityScore(
+                              "WIS",
+                              creature.wis,
+                              creature.saves?.wis
+                            )}
+                            ${renderAbilityScore(
+                              "CHA",
+                              creature.cha,
+                              creature.saves?.cha
+                            )}
+                        </div>
+                        
+                        ${
+                          creature.skills ||
+                          creature.vulnerabilities ||
+                          creature.resistances ||
+                          creature.immunities ||
+                          creature.conditionImmunities ||
+                          creature.senses ||
+                          creature.languages
+                            ? `
+                            <div class="traits-section">
+                                ${
+                                  creature.skills
+                                    ? `<div class="trait-group"><div class="trait-title">Skills:</div>${creature.skills}</div>`
+                                    : ""
+                                }
+                                ${
+                                  creature.vulnerabilities
+                                    ? `<div class="trait-group"><div class="trait-title">Vulnerabilities:</div>${creature.vulnerabilities}</div>`
+                                    : ""
+                                }
+                                ${
+                                  creature.resistances
+                                    ? `<div class="trait-group"><div class="trait-title">Resistances:</div>${creature.resistances}</div>`
+                                    : ""
+                                }
+                                ${
+                                  creature.immunities
+                                    ? `<div class="trait-group"><div class="trait-title">Immunities:</div>${creature.immunities}</div>`
+                                    : ""
+                                }
+                                ${
+                                  creature.conditionImmunities
+                                    ? `<div class="trait-group"><div class="trait-title">Condition Immunities:</div>${creature.conditionImmunities}</div>`
+                                    : ""
+                                }
+                                ${
+                                  creature.senses
+                                    ? `<div class="trait-group"><div class="trait-title">Senses:</div>${creature.senses}</div>`
+                                    : ""
+                                }
+                                ${
+                                  creature.languages
+                                    ? `<div class="trait-group"><div class="trait-title">Languages:</div>${creature.languages}</div>`
+                                    : ""
+                                }
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        ${
+                          creature.traits && creature.traits.length > 0
+                            ? `
+                            <div class="actions-section">
+                                <h4>Special Traits</h4>
+                                ${creature.traits
+                                  .map(
+                                    (trait) => `
+                                    <div class="action-item">
+                                        <div class="action-name">${trait.name}</div>
+                                        <div>${trait.desc}</div>
+                                    </div>
+                                `
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        ${
+                          creature.actions && creature.actions.length > 0
+                            ? `
+                            <div class="actions-section">
+                                <h4>Actions</h4>
+                                ${creature.actions
+                                  .map(
+                                    (action) => `
+                                    <div class="action-item">
+                                        <div class="action-name">${action.name}</div>
+                                        <div>${action.desc}</div>
+                                    </div>
+                                `
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        ${
+                          creature.reactions && creature.reactions.length > 0
+                            ? `
+                            <div class="actions-section">
+                                <h4>Reactions</h4>
+                                ${creature.reactions
+                                  .map(
+                                    (reaction) => `
+                                    <div class="action-item">
+                                        <div class="action-name">${reaction.name}</div>
+                                        <div>${reaction.desc}</div>
+                                    </div>
+                                `
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        ${
+                          creature.legendaryActions &&
+                          creature.legendaryActions.length > 0
+                            ? `
+                            <div class="legendary-section">
+                                <h4>Legendary Actions</h4>
+                                ${creature.legendaryActions
+                                  .map(
+                                    (action) => `
+                                    <div class="action-item">
+                                        <div class="action-name">${action.name}</div>
+                                        <div>${action.desc}</div>
+                                    </div>
+                                `
+                                  )
+                                  .join("")}
+                            </div>
+                        `
+                            : ""
+                        }
+                        
+                        ${
+                          creature.notes
+                            ? `
+                            <div class="traits-section">
+                                <div class="trait-group">
+                                    <div class="trait-title">Notes:</div>
+                                    ${creature.notes}
+                                </div>
+                            </div>
+                        `
+                            : ""
+                        }
+
+                    </div> </div>
             `;
       }
 
@@ -1706,6 +1821,7 @@
         document.getElementById("creatureINT").value = 10;
         document.getElementById("creatureWIS").value = 10;
         document.getElementById("creatureCHA").value = 10;
+        document.getElementById("creatureStatusEffects").value = ""; // Clear new field
 
         if (preset === "goblin") fillFormWithCreature(createGoblin());
         else if (preset === "orc") fillFormWithCreature(createOrc());
@@ -1773,6 +1889,9 @@
         document.getElementById("creatureSenses").value = creature.senses || "";
         document.getElementById("creatureLanguages").value =
           creature.languages || "";
+        // New field
+        document.getElementById("creatureStatusEffects").value =
+          creature.statusEffects?.join(", ") || "";
         document.getElementById("creatureTraits").value = creature.traits
           ? JSON.stringify(creature.traits, null, 2)
           : "";
@@ -1892,6 +2011,13 @@
           legendaryActions: legendaryActions,
           reactions: reactions,
           notes: document.getElementById("creatureNotes").value,
+          // New properties
+          statusEffects: document
+            .getElementById("creatureStatusEffects")
+            .value.split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          isCollapsed: false, // Default to not collapsed
           isDead: false,
         };
 
@@ -1901,6 +2027,7 @@
           );
           if (index !== -1) {
             creature.isDead = encounter.creatures[index].isDead;
+            creature.isCollapsed = encounter.creatures[index].isCollapsed; // Preserve collapse state
             encounter.creatures[index] = creature;
           }
         } else {
@@ -1931,6 +2058,17 @@
         renderContent();
       }
 
+      // NEW Function
+      function toggleCollapse(id) {
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        if (!encounter) return;
+        const creature = encounter.creatures.find((c) => c.id === id);
+        if (!creature) return;
+        creature.isCollapsed = !creature.isCollapsed;
+        saveToLocalStorage();
+        renderContent(); // Re-render to apply the class
+      }
+
       function adjustHP(id, amount) {
         const encounter = encounters.find((e) => e.id === currentEncounterId);
         if (!encounter) return;
@@ -1951,6 +2089,117 @@
         if (isNaN(value) || value === 0) return;
         adjustHP(id, -value);
         input.value = "";
+      }
+
+      // NEW Function for Drag and Drop
+      function attachDragAndDropListeners() {
+        const list = document.getElementById("current-creature-list");
+        if (!list) return;
+
+        let draggedId = null;
+
+        list.addEventListener("dragstart", (e) => {
+          const card = e.target.closest(".creature-card");
+          if (!card) return;
+          draggedId = card.dataset.creatureId;
+          // Use timeout to allow DOM to update before adding class
+          setTimeout(() => card.classList.add("dragging"), 0);
+        });
+
+        list.addEventListener("dragend", (e) => {
+          const card = e.target.closest(".creature-card");
+          if (card) card.classList.remove("dragging");
+          document.querySelectorAll(".creature-card").forEach((c) => {
+            c.classList.remove("drag-over-top", "drag-over-bottom");
+          });
+          draggedId = null;
+        });
+
+        list.addEventListener("dragover", (e) => {
+          e.preventDefault();
+          const card = e.target.closest(".creature-card");
+          if (!card || card.dataset.creatureId === draggedId) return;
+
+          const rect = card.getBoundingClientRect();
+          const offset = e.clientY - rect.top - rect.height / 2;
+
+          document.querySelectorAll(".creature-card").forEach((c) => {
+            c.classList.remove("drag-over-top", "drag-over-bottom");
+          });
+
+          if (offset < 0) {
+            card.classList.add("drag-over-top");
+          } else {
+            card.classList.add("drag-over-bottom");
+          }
+        });
+
+        list.addEventListener("dragleave", (e) => {
+          const card = e.target.closest(".creature-card");
+          if (card) {
+            card.classList.remove("drag-over-top", "drag-over-bottom");
+          }
+        });
+
+        list.addEventListener("drop", (e) => {
+          e.preventDefault();
+          const card = e.target.closest(".creature-card");
+
+          document.querySelectorAll(".creature-card").forEach((c) => {
+            c.classList.remove("drag-over-top", "drag-over-bottom");
+          });
+
+          if (!card || !draggedId || card.dataset.creatureId === draggedId) {
+            return;
+          }
+
+          const droppedOnId = card.dataset.creatureId;
+          const encounter = encounters.find((e) => e.id === currentEncounterId);
+          if (!encounter) return;
+
+          const dragIndex = encounter.creatures.findIndex(
+            (c) => c.id === draggedId
+          );
+          let dropIndex = encounter.creatures.findIndex(
+            (c) => c.id === droppedOnId
+          );
+
+          const rect = card.getBoundingClientRect();
+          const offset = e.clientY - rect.top - rect.height / 2;
+
+          // Find the correct new index in the *original* array
+          const originalDragIndex = encounter.creatures.findIndex(
+            (c) => c.id === draggedId
+          );
+          let originalDropIndex = encounter.creatures.findIndex(
+            (c) => c.id === droppedOnId
+          );
+
+          if (offset > 0) {
+            // Dropped on bottom half
+            originalDropIndex += 1;
+          }
+
+          // Remove and re-insert
+          const [draggedItem] = encounter.creatures.splice(
+            originalDragIndex,
+            1
+          );
+
+          // Adjust drop index if element was moved from before it
+          const newDropIndex = encounter.creatures.findIndex(
+            (c) => c.id === droppedOnId
+          );
+
+          if (offset < 0) {
+            encounter.creatures.splice(newDropIndex, 0, draggedItem);
+          } else {
+            encounter.creatures.splice(newDropIndex + 1, 0, draggedItem);
+          }
+
+          saveToLocalStorage();
+          renderContent(); // This will re-render, clearing drag states
+        });
       }
 
       async function searchMonsters(query) {
@@ -2155,6 +2404,9 @@
           // Languages
           document.getElementById("creatureLanguages").value =
             monster.languages || "";
+
+          // Clear new field
+          document.getElementById("creatureStatusEffects").value = "";
 
           // Special abilities (traits)
           const traits = [];
