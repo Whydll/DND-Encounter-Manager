@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>D&D Encounter Manager</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root[data-theme="dark"] {
+        --bg-primary: #1a1a2e;
+        --bg-secondary: #16213e;
+        --bg-card: #0f3460;
+        --text-primary: #eee;
+        --text-secondary: #bbb;
+        --accent: #e94560;
+        --accent-hover: #d63651;
+        --border: #2a3f5f;
+        --success: #22c55e;
+        --warning: #eab308;
+        --danger: #ef4444;
+      }
+
+      :root[data-theme="light"] {
+        --bg-primary: #f0f4f8;
+        --bg-secondary: #ffffff;
+        --bg-card: #ffffff;
+        --text-primary: #1a202c;
+        --text-secondary: #4a5568;
+        --accent: #3182ce;
+        --accent-hover: #2c5aa0;
+        --border: #e2e8f0;
+        --success: #22c55e;
+        --warning: #eab308;
+        --danger: #ef4444;
+      }
+
+      :root[data-theme="forest"] {
+        --bg-primary: #1a2f1a;
+        --bg-secondary: #2d4a2d;
+        --bg-card: #3d5a3d;
+        --text-primary: #e8f5e8;
+        --text-secondary: #b8d4b8;
+        --accent: #4ade80;
+        --accent-hover: #22c55e;
+        --border: #4a6a4a;
+        --success: #4ade80;
+        --warning: #fbbf24;
+        --danger: #f87171;
+      }
+
+      :root[data-theme="dragon"] {
+        --bg-primary: #2d1b1b;
+        --bg-secondary: #4a2d2d;
+        --bg-card: #5a3d3d;
+        --text-primary: #f5e8e8;
+        --text-secondary: #d4b8b8;
+        --accent: #dc2626;
+        --accent-hover: #b91c1c;
+        --border: #6a4a4a;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --danger: #dc2626;
+      }
+
+      :root[data-theme="arcane"] {
+        --bg-primary: #1e1b4b;
+        --bg-secondary: #312e81;
+        --bg-card: #3730a3;
+        --text-primary: #e0e7ff;
+        --text-secondary: #c7d2fe;
+        --accent: #a78bfa;
+        --accent-hover: #8b5cf6;
+        --border: #4c1d95;
+        --success: #34d399;
+        --warning: #fbbf24;
+        --danger: #f87171;
+      }
+
+      :root[data-theme="dungeon"] {
+        --bg-primary: #18181b;
+        --bg-secondary: #27272a;
+        --bg-card: #3f3f46;
+        --text-primary: #fafafa;
+        --text-secondary: #a1a1aa;
+        --accent: #f97316;
+        --accent-hover: #ea580c;
+        --border: #52525b;
+        --success: #22c55e;
+        --warning: #eab308;
+        --danger: #ef4444;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        transition: background 0.3s, color 0.3s;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      header {
+        background: var(--bg-secondary);
+        padding: 20px;
+        margin-bottom: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      h1 {
+        color: var(--accent);
+        font-size: 2em;
+      }
+
+      .header-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      select {
+        padding: 10px;
+        border: 2px solid var(--border);
+        border-radius: 5px;
+        background: var(--bg-card);
+        color: var(--text-primary);
+        font-size: 14px;
+        cursor: pointer;
+      }
+
+      button {
+        background: var(--accent);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+      }
+
+      button:hover {
+        background: var(--accent-hover);
+      }
+
+      button.secondary {
+        background: var(--bg-card);
+        border: 2px solid var(--border);
+        color: var(--text-primary);
+      }
+
+      button.danger {
+        background: var(--danger);
+      }
+
+      button.success {
+        background: var(--success);
+      }
+
+      .main-grid {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 968px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .sidebar {
+        background: var(--bg-secondary);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .encounter-list {
+        margin-top: 15px;
+      }
+
+      .encounter-item {
+        background: var(--bg-card);
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .encounter-item:hover {
+        border-color: var(--accent);
+      }
+
+      .encounter-item.active {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: white;
+      }
+
+      .encounter-actions {
+        display: flex;
+        gap: 5px;
+      }
+
+      .encounter-actions button {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+
+      .content-area {
+        background: var(--bg-secondary);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .add-creature-section {
+        background: var(--bg-card);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+
+      .search-container {
+        position: relative;
+        margin-bottom: 15px;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      textarea {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid var(--border);
+        border-radius: 5px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 14px;
+      }
+
+      .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border);
+        border-radius: 5px;
+        max-height: 300px;
+        overflow-y: auto;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      .search-results.active {
+        display: block;
+      }
+
+      .search-result-item {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border);
+        transition: background 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .search-result-item:hover {
+        background: var(--bg-card);
+      }
+
+      .search-result-cr {
+        font-size: 12px;
+        color: var(--accent);
+        font-weight: bold;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      label {
+        color: var(--text-secondary);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .creature-list {
+        display: grid;
+        gap: 15px;
+      }
+
+      .creature-card {
+        background: var(--bg-card);
+        padding: 20px;
+        border-radius: 8px;
+        border: 2px solid var(--border);
+        transition: all 0.3s;
+      }
+
+      .creature-card.dead {
+        opacity: 0.6;
+        border-color: var(--danger);
+      }
+
+      .creature-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .creature-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .creature-name {
+        font-size: 1.5em;
+        font-weight: bold;
+      }
+
+      .cr-badge,
+      .type-badge,
+      .size-badge,
+      .alignment-badge {
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.85em;
+      }
+
+      .cr-badge {
+        background: var(--accent);
+      }
+
+      .type-badge {
+        background: var(--success);
+      }
+
+      .size-badge {
+        background: var(--warning);
+      }
+
+      .alignment-badge {
+        background: #6366f1;
+      }
+
+      .creature-controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .stat-box {
+        background: var(--bg-secondary);
+        padding: 10px;
+        border-radius: 5px;
+        text-align: center;
+      }
+
+      .stat-label {
+        color: var(--text-secondary);
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+
+      .stat-value {
+        font-size: 1.5em;
+        font-weight: bold;
+        color: var(--accent);
+      }
+
+      .hp-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--bg-secondary);
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+      }
+
+      .hp-bar {
+        flex: 1;
+        min-width: 200px;
+        height: 30px;
+        background: var(--border);
+        border-radius: 5px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .hp-bar-fill {
+        height: 100%;
+        background: var(--success);
+        transition: width 0.3s, background 0.3s;
+      }
+
+      .hp-bar-fill.low {
+        background: var(--warning);
+      }
+
+      .hp-bar-fill.critical {
+        background: var(--danger);
+      }
+
+      .hp-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-weight: bold;
+        color: var(--text-primary);
+        text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+      }
+
+      .ability-scores {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      @media (max-width: 768px) {
+        .ability-scores {
+          grid-template-columns: repeat(3, 1fr);
+        }
+      }
+
+      .ability-score {
+        text-align: center;
+        background: var(--bg-secondary);
+        padding: 8px;
+        border-radius: 5px;
+      }
+
+      .ability-name {
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      .ability-value {
+        font-size: 1.2em;
+        font-weight: bold;
+      }
+
+      .ability-modifier {
+        font-size: 0.9em;
+        color: var(--accent);
+      }
+
+      .actions-section {
+        margin-top: 15px;
+      }
+
+      .action-item {
+        background: var(--bg-secondary);
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+      }
+
+      .action-name {
+        font-weight: bold;
+        color: var(--accent);
+        margin-bottom: 5px;
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        overflow-y: auto;
+        padding: 20px;
+      }
+
+      .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-content {
+        background: var(--bg-secondary);
+        padding: 30px;
+        border-radius: 10px;
+        max-width: 900px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .close-btn {
+        background: var(--danger);
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      textarea {
+        min-height: 100px;
+        resize: vertical;
+        font-family: monospace;
+      }
+
+      .initiative-badge {
+        background: var(--warning);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+
+      @media print {
+        body {
+          background: white;
+          color: black;
+        }
+
+        .sidebar,
+        header,
+        .creature-controls,
+        .add-creature-section,
+        .hp-control {
+          display: none !important;
+        }
+
+        .creature-card {
+          page-break-inside: avoid;
+          border: 2px solid #333;
+          margin-bottom: 20px;
+        }
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary);
+      }
+
+      .empty-state h3 {
+        margin-bottom: 10px;
+      }
+
+      .quick-damage {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 10px;
+        align-items: center;
+      }
+
+      .quick-damage input {
+        flex: 1;
+        max-width: 150px;
+      }
+
+      .traits-section {
+        margin-bottom: 15px;
+      }
+
+      .trait-group {
+        background: var(--bg-secondary);
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 5px;
+      }
+
+      .trait-title {
+        font-weight: bold;
+        color: var(--accent);
+        margin-bottom: 5px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: var(--text-secondary);
+      }
+
+      .proficiency-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .proficiency-badge {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+
+      .legendary-section {
+        background: linear-gradient(
+          135deg,
+          var(--accent) 0%,
+          var(--accent-hover) 100%
+        );
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+      }
+
+      .legendary-section h4 {
+        margin-bottom: 10px;
+      }
+
+      .xp-badge {
+        background: #f59e0b;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 0.85em;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🐉 D&D Encounter Manager</h1>
+        <div class="header-controls">
+          <select id="themeSelect">
+            <option value="dark">🌙 Dark Theme</option>
+            <option value="light">☀️ Light Theme</option>
+            <option value="forest">🌲 Forest Theme</option>
+            <option value="dragon">🔥 Dragon Theme</option>
+            <option value="arcane">✨ Arcane Theme</option>
+            <option value="dungeon">⚔️ Dungeon Theme</option>
+          </select>
+          <button id="exportBtn">📥 Export</button>
+          <button id="importBtn">📤 Import</button>
+          <button id="printBtn">🖨️ Print</button>
+        </div>
+      </header>
+
+      <div class="main-grid">
+        <div class="sidebar">
+          <h2>Encounters</h2>
+          <button id="addEncounterBtn" style="width: 100%; margin-top: 10px">
+            + New Encounter
+          </button>
+          <div class="encounter-list" id="encounterList"></div>
+        </div>
+
+        <div class="content-area">
+          <div id="contentArea">
+            <div class="empty-state">
+              <h3>Select or create an encounter to begin</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="creatureModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">Add Creature</h2>
+          <button class="close-btn" id="closeModalBtn">✕</button>
+        </div>
+
+        <div class="search-container">
+          <label>🔍 Search D&D 5e API</label>
+          <input
+            type="text"
+            id="apiSearch"
+            placeholder="Type to search monsters (e.g., dragon, goblin, beholder)..."
+          />
+          <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <form id="creatureForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Name *</label>
+              <input type="text" id="creatureName" required />
+            </div>
+            <div class="form-group">
+              <label>Type</label>
+              <input
+                type="text"
+                id="creatureType"
+                placeholder="e.g., humanoid"
+              />
+            </div>
+            <div class="form-group">
+              <label>Size</label>
+              <input type="text" id="creatureSize" placeholder="e.g., Medium" />
+            </div>
+            <div class="form-group">
+              <label>Alignment</label>
+              <input
+                type="text"
+                id="creatureAlignment"
+                placeholder="e.g., chaotic evil"
+              />
+            </div>
+            <div class="form-group">
+              <label>CR *</label>
+              <input type="text" id="creatureCR" required />
+            </div>
+            <div class="form-group">
+              <label>XP</label>
+              <input
+                type="number"
+                id="creatureXP"
+                placeholder="Experience points"
+              />
+            </div>
+            <div class="form-group">
+              <label>AC *</label>
+              <input type="number" id="creatureAC" required />
+            </div>
+            <div class="form-group">
+              <label>AC Type</label>
+              <input
+                type="text"
+                id="creatureACType"
+                placeholder="e.g., natural armor"
+              />
+            </div>
+            <div class="form-group">
+              <label>Max HP *</label>
+              <input type="number" id="creatureMaxHP" required />
+            </div>
+            <div class="form-group">
+              <label>HP Formula</label>
+              <input
+                type="text"
+                id="creatureHPFormula"
+                placeholder="e.g., 2d8 + 2"
+              />
+            </div>
+            <div class="form-group">
+              <label>Current HP</label>
+              <input type="number" id="creatureCurrentHP" />
+            </div>
+            <div class="form-group">
+              <label>Initiative</label>
+              <input type="number" id="creatureInitiative" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Speed</label>
+            <input
+              type="text"
+              id="creatureSpeed"
+              placeholder="30 ft., fly 60 ft."
+            />
+          </div>
+
+          <h3 style="margin-top: 20px; margin-bottom: 10px">Ability Scores</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>STR</label>
+              <input type="number" id="creatureSTR" value="10" />
+            </div>
+            <div class="form-group">
+              <label>DEX</label>
+              <input type="number" id="creatureDEX" value="10" />
+            </div>
+            <div class="form-group">
+              <label>CON</label>
+              <input type="number" id="creatureCON" value="10" />
+            </div>
+            <div class="form-group">
+              <label>INT</label>
+              <input type="number" id="creatureINT" value="10" />
+            </div>
+            <div class="form-group">
+              <label>WIS</label>
+              <input type="number" id="creatureWIS" value="10" />
+            </div>
+            <div class="form-group">
+              <label>CHA</label>
+              <input type="number" id="creatureCHA" value="10" />
+            </div>
+          </div>
+
+          <h3 style="margin-top: 20px; margin-bottom: 10px">Saving Throws</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>STR Save</label>
+              <input type="text" id="creatureStrSave" placeholder="e.g., +5" />
+            </div>
+            <div class="form-group">
+              <label>DEX Save</label>
+              <input type="text" id="creatureDexSave" placeholder="e.g., +3" />
+            </div>
+            <div class="form-group">
+              <label>CON Save</label>
+              <input type="text" id="creatureConSave" placeholder="e.g., +4" />
+            </div>
+            <div class="form-group">
+              <label>INT Save</label>
+              <input type="text" id="creatureIntSave" placeholder="e.g., +2" />
+            </div>
+            <div class="form-group">
+              <label>WIS Save</label>
+              <input type="text" id="creatureWisSave" placeholder="e.g., +3" />
+            </div>
+            <div class="form-group">
+              <label>CHA Save</label>
+              <input type="text" id="creatureChaSave" placeholder="e.g., +1" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Skills</label>
+            <input
+              type="text"
+              id="creatureSkills"
+              placeholder="Stealth +6, Perception +4"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Damage Vulnerabilities</label>
+            <input
+              type="text"
+              id="creatureVulnerabilities"
+              placeholder="Fire, Radiant"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Damage Resistances</label>
+            <input
+              type="text"
+              id="creatureResistances"
+              placeholder="Fire, Cold"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Damage Immunities</label>
+            <input
+              type="text"
+              id="creatureImmunities"
+              placeholder="Poison, Psychic"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Condition Immunities</label>
+            <input
+              type="text"
+              id="creatureConditionImmunities"
+              placeholder="Charmed, Frightened"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Senses</label>
+            <input
+              type="text"
+              id="creatureSenses"
+              placeholder="Darkvision 60 ft., passive Perception 12"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Languages</label>
+            <input
+              type="text"
+              id="creatureLanguages"
+              placeholder="Common, Goblin"
+            />
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Special Traits (JSON format)</label>
+            <textarea
+              id="creatureTraits"
+              placeholder='[{"name":"Nimble Escape","desc":"Can take Disengage or Hide as bonus action"}]'
+            ></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Actions (JSON format)</label>
+            <textarea
+              id="creatureActions"
+              placeholder='[{"name":"Scimitar","desc":"Melee Weapon Attack: +4 to hit, reach 5 ft."}]'
+            ></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Legendary Actions (JSON format)</label>
+            <textarea
+              id="creatureLegendaryActions"
+              placeholder='[{"name":"Detect","desc":"The dragon makes a Wisdom (Perception) check."}]'
+            ></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Reactions (JSON format)</label>
+            <textarea
+              id="creatureReactions"
+              placeholder='[{"name":"Parry","desc":"The creature adds 2 to its AC against one melee attack."}]'
+            ></textarea>
+          </div>
+
+          <div class="form-group" style="margin-top: 15px">
+            <label>Notes</label>
+            <textarea
+              id="creatureNotes"
+              placeholder="Additional notes..."
+            ></textarea>
+          </div>
+
+          <div style="margin-top: 20px; display: flex; gap: 10px">
+            <button type="submit" class="success">💾 Save Creature</button>
+            <button type="button" class="secondary" id="cancelBtn">
+              ❌ Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // State
+      let encounters = [];
+      let currentEncounterId = null;
+      let editingCreatureId = null;
+      let searchTimeout = null;
+
+      function init() {
+        loadFromLocalStorage();
+        if (encounters.length === 0) {
+          createSampleData();
+        }
+        renderEncounterList();
+        if (encounters.length > 0) {
+          selectEncounter(encounters[0].id);
+        }
+        attachEventListeners();
+        loadTheme();
+      }
+
+      function attachEventListeners() {
+        document
+          .getElementById("addEncounterBtn")
+          .addEventListener("click", addEncounter);
+        document
+          .getElementById("themeSelect")
+          .addEventListener("change", (e) => changeTheme(e.target.value));
+        document
+          .getElementById("exportBtn")
+          .addEventListener("click", exportData);
+        document
+          .getElementById("importBtn")
+          .addEventListener("click", importData);
+        document
+          .getElementById("printBtn")
+          .addEventListener("click", () => window.print());
+        document
+          .getElementById("closeModalBtn")
+          .addEventListener("click", closeCreatureModal);
+        document
+          .getElementById("cancelBtn")
+          .addEventListener("click", closeCreatureModal);
+        document
+          .getElementById("creatureForm")
+          .addEventListener("submit", saveCreature);
+        document
+          .getElementById("apiSearch")
+          .addEventListener("input", (e) => searchMonsters(e.target.value));
+
+        document.addEventListener("click", function (e) {
+          const searchContainer = document.querySelector(".search-container");
+          if (searchContainer && !searchContainer.contains(e.target)) {
+            document.getElementById("searchResults").classList.remove("active");
+          }
+        });
+      }
+
+      function generateId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+      }
+
+      function createSampleData() {
+        encounters = [
+          {
+            id: generateId(),
+            name: "Goblin Ambush",
+            creatures: [createGoblin(), createGoblin(), createGoblin()],
+          },
+          {
+            id: generateId(),
+            name: "Orc Warband",
+            creatures: [createOrc(), createOrc(), createBandit()],
+          },
+          {
+            id: generateId(),
+            name: "Bandit Hideout",
+            creatures: [createBandit(), createBandit()],
+          },
+        ];
+        saveToLocalStorage();
+      }
+
+      function createGoblin() {
+        return {
+          id: generateId(),
+          name: "Goblin",
+          type: "humanoid",
+          size: "Small",
+          alignment: "neutral evil",
+          cr: "1/4",
+          xp: 50,
+          ac: 15,
+          acType: "leather armor, shield",
+          maxHp: 7,
+          hpFormula: "2d6",
+          currentHp: 7,
+          initiative: Math.floor(Math.random() * 20) + 1,
+          speed: "30 ft.",
+          str: 8,
+          dex: 14,
+          con: 10,
+          int: 10,
+          wis: 8,
+          cha: 8,
+          saves: {},
+          skills: "Stealth +6",
+          vulnerabilities: "",
+          resistances: "",
+          immunities: "",
+          conditionImmunities: "",
+          senses: "Darkvision 60 ft., passive Perception 9",
+          languages: "Common, Goblin",
+          traits: [
+            {
+              name: "Nimble Escape",
+              desc: "The goblin can take the Disengage or Hide action as a bonus action on each of its turns.",
+            },
+          ],
+          actions: [
+            {
+              name: "Scimitar",
+              desc: "Melee Weapon Attack: +4 to hit, reach 5 ft., one target. Hit: 5 (1d6 + 2) slashing damage.",
+            },
+            {
+              name: "Shortbow",
+              desc: "Ranged Weapon Attack: +4 to hit, range 80/320 ft., one target. Hit: 5 (1d6 + 2) piercing damage.",
+            },
+          ],
+          legendaryActions: [],
+          reactions: [],
+          notes: "",
+          isDead: false,
+        };
+      }
+
+      function createOrc() {
+        return {
+          id: generateId(),
+          name: "Orc",
+          type: "humanoid",
+          size: "Medium",
+          alignment: "chaotic evil",
+          cr: "1/2",
+          xp: 100,
+          ac: 13,
+          acType: "hide armor",
+          maxHp: 15,
+          hpFormula: "2d8 + 6",
+          currentHp: 15,
+          initiative: Math.floor(Math.random() * 20) + 1,
+          speed: "30 ft.",
+          str: 16,
+          dex: 12,
+          con: 16,
+          int: 7,
+          wis: 11,
+          cha: 10,
+          saves: {},
+          skills: "Intimidation +2",
+          vulnerabilities: "",
+          resistances: "",
+          immunities: "",
+          conditionImmunities: "",
+          senses: "Darkvision 60 ft., passive Perception 10",
+          languages: "Common, Orc",
+          traits: [
+            {
+              name: "Aggressive",
+              desc: "As a bonus action, the orc can move up to its speed toward a hostile creature that it can see.",
+            },
+          ],
+          actions: [
+            {
+              name: "Greataxe",
+              desc: "Melee Weapon Attack: +5 to hit, reach 5 ft., one target. Hit: 9 (1d12 + 3) slashing damage.",
+            },
+            {
+              name: "Javelin",
+              desc: "Melee or Ranged Weapon Attack: +5 to hit, reach 5 ft. or range 30/120 ft., one target. Hit: 6 (1d6 + 3) piercing damage.",
+            },
+          ],
+          legendaryActions: [],
+          reactions: [],
+          notes: "",
+          isDead: false,
+        };
+      }
+
+      function createBandit() {
+        return {
+          id: generateId(),
+          name: "Bandit",
+          type: "humanoid",
+          size: "Medium",
+          alignment: "any non-lawful",
+          cr: "1/8",
+          xp: 25,
+          ac: 12,
+          acType: "leather armor",
+          maxHp: 11,
+          hpFormula: "2d8 + 2",
+          currentHp: 11,
+          initiative: Math.floor(Math.random() * 20) + 1,
+          speed: "30 ft.",
+          str: 11,
+          dex: 12,
+          con: 12,
+          int: 10,
+          wis: 10,
+          cha: 10,
+          saves: {},
+          skills: "",
+          vulnerabilities: "",
+          resistances: "",
+          immunities: "",
+          conditionImmunities: "",
+          senses: "Passive Perception 10",
+          languages: "Common",
+          traits: [],
+          actions: [
+            {
+              name: "Scimitar",
+              desc: "Melee Weapon Attack: +3 to hit, reach 5 ft., one target. Hit: 4 (1d6 + 1) slashing damage.",
+            },
+            {
+              name: "Light Crossbow",
+              desc: "Ranged Weapon Attack: +3 to hit, range 80/320 ft., one target. Hit: 5 (1d8 + 1) piercing damage.",
+            },
+          ],
+          legendaryActions: [],
+          reactions: [],
+          notes: "",
+          isDead: false,
+        };
+      }
+
+      function addEncounter() {
+        const name = prompt("Enter encounter name:", "New Encounter");
+        if (!name) return;
+
+        const encounter = { id: generateId(), name: name, creatures: [] };
+        encounters.push(encounter);
+        saveToLocalStorage();
+        renderEncounterList();
+        selectEncounter(encounter.id);
+      }
+
+      function deleteEncounter(id) {
+        if (!confirm("Delete this encounter?")) return;
+        encounters = encounters.filter((e) => e.id !== id);
+        saveToLocalStorage();
+        renderEncounterList();
+        if (currentEncounterId === id) {
+          currentEncounterId = null;
+          renderContent();
+        }
+      }
+
+      function renameEncounter(id) {
+        const encounter = encounters.find((e) => e.id === id);
+        if (!encounter) return;
+        const newName = prompt("Enter new name:", encounter.name);
+        if (!newName) return;
+        encounter.name = newName;
+        saveToLocalStorage();
+        renderEncounterList();
+      }
+
+      function duplicateEncounter(id) {
+        const encounter = encounters.find((e) => e.id === id);
+        if (!encounter) return;
+        const duplicate = {
+          id: generateId(),
+          name: encounter.name + " (Copy)",
+          creatures: encounter.creatures.map((c) => ({
+            ...c,
+            id: generateId(),
+          })),
+        };
+        encounters.push(duplicate);
+        saveToLocalStorage();
+        renderEncounterList();
+        selectEncounter(duplicate.id);
+      }
+
+      function selectEncounter(id) {
+        currentEncounterId = id;
+        renderEncounterList();
+        renderContent();
+      }
+
+      function renderEncounterList() {
+        const list = document.getElementById("encounterList");
+        list.innerHTML = encounters
+          .map(
+            (encounter) => `
+                <div class="encounter-item ${
+                  encounter.id === currentEncounterId ? "active" : ""
+                }" data-id="${encounter.id}">
+                    <div>
+                        <strong>${encounter.name}</strong>
+                        <div style="font-size: 12px; color: var(--text-secondary);">
+                            ${encounter.creatures.length} creature(s)
+                        </div>
+                    </div>
+                    <div class="encounter-actions">
+                        <button class="secondary" data-action="rename" title="Rename">✏️</button>
+                        <button class="secondary" data-action="duplicate" title="Duplicate">📋</button>
+                        <button class="danger" data-action="delete" title="Delete">🗑️</button>
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+
+        list.querySelectorAll(".encounter-item").forEach((item) => {
+          const id = item.dataset.id;
+          item.addEventListener("click", (e) => {
+            if (!e.target.closest(".encounter-actions")) {
+              selectEncounter(id);
+            }
+          });
+
+          item.querySelectorAll("[data-action]").forEach((btn) => {
+            btn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const action = btn.dataset.action;
+              if (action === "delete") deleteEncounter(id);
+              if (action === "rename") renameEncounter(id);
+              if (action === "duplicate") duplicateEncounter(id);
+            });
+          });
+        });
+      }
+
+      function renderContent() {
+        const contentArea = document.getElementById("contentArea");
+
+        if (!currentEncounterId) {
+          contentArea.innerHTML =
+            '<div class="empty-state"><h3>Select or create an encounter to begin</h3></div>';
+          return;
+        }
+
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        if (!encounter) return;
+
+        const sortedCreatures = [...encounter.creatures].sort(
+          (a, b) => (b.initiative || 0) - (a.initiative || 0)
+        );
+
+        contentArea.innerHTML = `
+                <div class="add-creature-section">
+                    <h3>📝 ${encounter.name}</h3>
+                    <button class="success" data-preset="none">+ Add Creature</button>
+                    <button class="secondary" data-preset="goblin">+ Goblin</button>
+                    <button class="secondary" data-preset="orc">+ Orc</button>
+                    <button class="secondary" data-preset="bandit">+ Bandit</button>
+                </div>
+                <div class="creature-list">
+                    ${
+                      sortedCreatures.length === 0
+                        ? '<div class="empty-state"><p>No creatures yet. Add one to get started!</p></div>'
+                        : sortedCreatures
+                            .map((creature) => renderCreatureCard(creature))
+                            .join("")
+                    }
+                </div>
+            `;
+
+        contentArea.querySelectorAll("[data-preset]").forEach((btn) => {
+          btn.addEventListener("click", () =>
+            openCreatureModal(btn.dataset.preset)
+          );
+        });
+
+        contentArea
+          .querySelectorAll("[data-creature-action]")
+          .forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const creatureId = btn.dataset.creatureId;
+              const action = btn.dataset.creatureAction;
+              if (action === "edit") editCreature(creatureId);
+              if (action === "delete") deleteCreature(creatureId);
+              if (action === "toggle-dead") toggleDead(creatureId);
+            });
+          });
+
+        contentArea.querySelectorAll("[data-hp-adjust]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            adjustHP(btn.dataset.creatureId, parseInt(btn.dataset.hpAdjust));
+          });
+        });
+
+        contentArea.querySelectorAll("[data-quick-damage]").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            applyQuickDamage(btn.dataset.creatureId);
+          });
+        });
+      }
+
+      function renderCreatureCard(creature) {
+        const hpPercent = (creature.currentHp / creature.maxHp) * 100;
+        const hpClass =
+          hpPercent > 50 ? "" : hpPercent > 25 ? "low" : "critical";
+
+        return `
+                <div class="creature-card ${creature.isDead ? "dead" : ""}">
+                    <div class="creature-header">
+                        <div class="creature-title">
+                            <span class="creature-name">${creature.name}</span>
+                            ${
+                              creature.size
+                                ? `<span class="size-badge">${creature.size}</span>`
+                                : ""
+                            }
+                            ${
+                              creature.type
+                                ? `<span class="type-badge">${creature.type}</span>`
+                                : ""
+                            }
+                            <span class="cr-badge">CR ${creature.cr}</span>
+                            ${
+                              creature.xp
+                                ? `<span class="xp-badge">${creature.xp} XP</span>`
+                                : ""
+                            }
+                            <span class="initiative-badge">Init: ${
+                              creature.initiative || 0
+                            }</span>
+                        </div>
+                        <div class="creature-controls">
+                            <button class="secondary" data-creature-action="edit" data-creature-id="${
+                              creature.id
+                            }">✏️ Edit</button>
+                            <button class="${
+                              creature.isDead ? "success" : "warning"
+                            }" data-creature-action="toggle-dead" data-creature-id="${
+          creature.id
+        }">
+                                ${creature.isDead ? "❤️ Revive" : "💀 Down"}
+                            </button>
+                            <button class="danger" data-creature-action="delete" data-creature-id="${
+                              creature.id
+                            }">🗑️ Delete</button>
+                        </div>
+                    </div>
+                    
+                    ${
+                      creature.alignment
+                        ? `<div style="margin-bottom: 10px;"><span class="alignment-badge">${creature.alignment}</span></div>`
+                        : ""
+                    }
+                    
+                    <div class="hp-control">
+                        <button data-hp-adjust="-10" data-creature-id="${
+                          creature.id
+                        }">-10</button>
+                        <button data-hp-adjust="-5" data-creature-id="${
+                          creature.id
+                        }">-5</button>
+                        <button data-hp-adjust="-1" data-creature-id="${
+                          creature.id
+                        }">-1</button>
+                        <div class="hp-bar">
+                            <div class="hp-bar-fill ${hpClass}" style="width: ${Math.max(
+          0,
+          hpPercent
+        )}%"></div>
+                            <div class="hp-text">${creature.currentHp} / ${
+          creature.maxHp
+        } HP ${creature.hpFormula ? `(${creature.hpFormula})` : ""}</div>
+                        </div>
+                        <button data-hp-adjust="1" data-creature-id="${
+                          creature.id
+                        }">+1</button>
+                        <button data-hp-adjust="5" data-creature-id="${
+                          creature.id
+                        }">+5</button>
+                        <button data-hp-adjust="10" data-creature-id="${
+                          creature.id
+                        }">+10</button>
+                    </div>
+                    
+                    <div class="quick-damage">
+                        <input type="number" id="damage-${
+                          creature.id
+                        }" placeholder="Damage/Heal" />
+                        <button data-quick-damage="true" data-creature-id="${
+                          creature.id
+                        }">Apply</button>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-label">AC</div>
+                            <div class="stat-value">${creature.ac} ${
+          creature.acType
+            ? `<div style="font-size: 11px; color: var(--text-secondary);">(${creature.acType})</div>`
+            : ""
+        }</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Speed</div>
+                            <div class="stat-value" style="font-size: 1em;">${
+                              creature.speed || "N/A"
+                            }</div>
+                        </div>
+                    </div>
+                    
+                    <div class="ability-scores">
+                        ${renderAbilityScore(
+                          "STR",
+                          creature.str,
+                          creature.saves?.str
+                        )}
+                        ${renderAbilityScore(
+                          "DEX",
+                          creature.dex,
+                          creature.saves?.dex
+                        )}
+                        ${renderAbilityScore(
+                          "CON",
+                          creature.con,
+                          creature.saves?.con
+                        )}
+                        ${renderAbilityScore(
+                          "INT",
+                          creature.int,
+                          creature.saves?.int
+                        )}
+                        ${renderAbilityScore(
+                          "WIS",
+                          creature.wis,
+                          creature.saves?.wis
+                        )}
+                        ${renderAbilityScore(
+                          "CHA",
+                          creature.cha,
+                          creature.saves?.cha
+                        )}
+                    </div>
+                    
+                    ${
+                      creature.skills ||
+                      creature.vulnerabilities ||
+                      creature.resistances ||
+                      creature.immunities ||
+                      creature.conditionImmunities ||
+                      creature.senses ||
+                      creature.languages
+                        ? `
+                        <div class="traits-section">
+                            ${
+                              creature.skills
+                                ? `<div class="trait-group"><div class="trait-title">Skills:</div>${creature.skills}</div>`
+                                : ""
+                            }
+                            ${
+                              creature.vulnerabilities
+                                ? `<div class="trait-group"><div class="trait-title">Vulnerabilities:</div>${creature.vulnerabilities}</div>`
+                                : ""
+                            }
+                            ${
+                              creature.resistances
+                                ? `<div class="trait-group"><div class="trait-title">Resistances:</div>${creature.resistances}</div>`
+                                : ""
+                            }
+                            ${
+                              creature.immunities
+                                ? `<div class="trait-group"><div class="trait-title">Immunities:</div>${creature.immunities}</div>`
+                                : ""
+                            }
+                            ${
+                              creature.conditionImmunities
+                                ? `<div class="trait-group"><div class="trait-title">Condition Immunities:</div>${creature.conditionImmunities}</div>`
+                                : ""
+                            }
+                            ${
+                              creature.senses
+                                ? `<div class="trait-group"><div class="trait-title">Senses:</div>${creature.senses}</div>`
+                                : ""
+                            }
+                            ${
+                              creature.languages
+                                ? `<div class="trait-group"><div class="trait-title">Languages:</div>${creature.languages}</div>`
+                                : ""
+                            }
+                        </div>
+                    `
+                        : ""
+                    }
+                    
+                    ${
+                      creature.traits && creature.traits.length > 0
+                        ? `
+                        <div class="actions-section">
+                            <h4>Special Traits</h4>
+                            ${creature.traits
+                              .map(
+                                (trait) => `
+                                <div class="action-item">
+                                    <div class="action-name">${trait.name}</div>
+                                    <div>${trait.desc}</div>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    `
+                        : ""
+                    }
+                    
+                    ${
+                      creature.actions && creature.actions.length > 0
+                        ? `
+                        <div class="actions-section">
+                            <h4>Actions</h4>
+                            ${creature.actions
+                              .map(
+                                (action) => `
+                                <div class="action-item">
+                                    <div class="action-name">${action.name}</div>
+                                    <div>${action.desc}</div>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    `
+                        : ""
+                    }
+                    
+                    ${
+                      creature.reactions && creature.reactions.length > 0
+                        ? `
+                        <div class="actions-section">
+                            <h4>Reactions</h4>
+                            ${creature.reactions
+                              .map(
+                                (reaction) => `
+                                <div class="action-item">
+                                    <div class="action-name">${reaction.name}</div>
+                                    <div>${reaction.desc}</div>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    `
+                        : ""
+                    }
+                    
+                    ${
+                      creature.legendaryActions &&
+                      creature.legendaryActions.length > 0
+                        ? `
+                        <div class="legendary-section">
+                            <h4>Legendary Actions</h4>
+                            ${creature.legendaryActions
+                              .map(
+                                (action) => `
+                                <div class="action-item">
+                                    <div class="action-name">${action.name}</div>
+                                    <div>${action.desc}</div>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    `
+                        : ""
+                    }
+                    
+                    ${
+                      creature.notes
+                        ? `
+                        <div class="traits-section">
+                            <div class="trait-group">
+                                <div class="trait-title">Notes:</div>
+                                ${creature.notes}
+                            </div>
+                        </div>
+                    `
+                        : ""
+                    }
+                </div>
+            `;
+      }
+
+      function renderAbilityScore(name, value, save) {
+        const modifier = Math.floor((value - 10) / 2);
+        const modifierStr = modifier >= 0 ? `+${modifier}` : modifier;
+        return `
+                <div class="ability-score">
+                    <div class="ability-name">${name}</div>
+                    <div class="ability-value">${value}</div>
+                    <div class="ability-modifier">${modifierStr}</div>
+                    ${
+                      save
+                        ? `<div style="font-size: 10px; color: var(--success);">Save: ${save}</div>`
+                        : ""
+                    }
+                </div>
+            `;
+      }
+
+      function openCreatureModal(preset = "none") {
+        editingCreatureId = null;
+        document.getElementById("modalTitle").textContent = "Add Creature";
+        document.getElementById("creatureForm").reset();
+        document.getElementById("apiSearch").value = "";
+        document.getElementById("searchResults").classList.remove("active");
+
+        document.getElementById("creatureSTR").value = 10;
+        document.getElementById("creatureDEX").value = 10;
+        document.getElementById("creatureCON").value = 10;
+        document.getElementById("creatureINT").value = 10;
+        document.getElementById("creatureWIS").value = 10;
+        document.getElementById("creatureCHA").value = 10;
+
+        if (preset === "goblin") fillFormWithCreature(createGoblin());
+        else if (preset === "orc") fillFormWithCreature(createOrc());
+        else if (preset === "bandit") fillFormWithCreature(createBandit());
+
+        document.getElementById("creatureModal").classList.add("active");
+      }
+
+      function editCreature(id) {
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        const creature = encounter.creatures.find((c) => c.id === id);
+        if (!creature) return;
+
+        editingCreatureId = id;
+        document.getElementById("modalTitle").textContent = "Edit Creature";
+        fillFormWithCreature(creature);
+        document.getElementById("creatureModal").classList.add("active");
+      }
+
+      function fillFormWithCreature(creature) {
+        document.getElementById("creatureName").value = creature.name;
+        document.getElementById("creatureType").value = creature.type || "";
+        document.getElementById("creatureSize").value = creature.size || "";
+        document.getElementById("creatureAlignment").value =
+          creature.alignment || "";
+        document.getElementById("creatureCR").value = creature.cr;
+        document.getElementById("creatureXP").value = creature.xp || "";
+        document.getElementById("creatureAC").value = creature.ac;
+        document.getElementById("creatureACType").value = creature.acType || "";
+        document.getElementById("creatureMaxHP").value = creature.maxHp;
+        document.getElementById("creatureHPFormula").value =
+          creature.hpFormula || "";
+        document.getElementById("creatureCurrentHP").value =
+          creature.currentHp || creature.maxHp;
+        document.getElementById("creatureInitiative").value =
+          creature.initiative || "";
+        document.getElementById("creatureSpeed").value = creature.speed || "";
+        document.getElementById("creatureSTR").value = creature.str;
+        document.getElementById("creatureDEX").value = creature.dex;
+        document.getElementById("creatureCON").value = creature.con;
+        document.getElementById("creatureINT").value = creature.int;
+        document.getElementById("creatureWIS").value = creature.wis;
+        document.getElementById("creatureCHA").value = creature.cha;
+        document.getElementById("creatureStrSave").value =
+          creature.saves?.str || "";
+        document.getElementById("creatureDexSave").value =
+          creature.saves?.dex || "";
+        document.getElementById("creatureConSave").value =
+          creature.saves?.con || "";
+        document.getElementById("creatureIntSave").value =
+          creature.saves?.int || "";
+        document.getElementById("creatureWisSave").value =
+          creature.saves?.wis || "";
+        document.getElementById("creatureChaSave").value =
+          creature.saves?.cha || "";
+        document.getElementById("creatureSkills").value = creature.skills || "";
+        document.getElementById("creatureVulnerabilities").value =
+          creature.vulnerabilities || "";
+        document.getElementById("creatureResistances").value =
+          creature.resistances || "";
+        document.getElementById("creatureImmunities").value =
+          creature.immunities || "";
+        document.getElementById("creatureConditionImmunities").value =
+          creature.conditionImmunities || "";
+        document.getElementById("creatureSenses").value = creature.senses || "";
+        document.getElementById("creatureLanguages").value =
+          creature.languages || "";
+        document.getElementById("creatureTraits").value = creature.traits
+          ? JSON.stringify(creature.traits, null, 2)
+          : "";
+        document.getElementById("creatureActions").value = creature.actions
+          ? JSON.stringify(creature.actions, null, 2)
+          : "";
+        document.getElementById("creatureLegendaryActions").value =
+          creature.legendaryActions
+            ? JSON.stringify(creature.legendaryActions, null, 2)
+            : "";
+        document.getElementById("creatureReactions").value = creature.reactions
+          ? JSON.stringify(creature.reactions, null, 2)
+          : "";
+        document.getElementById("creatureNotes").value = creature.notes || "";
+      }
+
+      function closeCreatureModal() {
+        document.getElementById("creatureModal").classList.remove("active");
+        editingCreatureId = null;
+      }
+
+      function saveCreature(event) {
+        event.preventDefault();
+
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        if (!encounter) return;
+
+        let traits = [];
+        let actions = [];
+        let legendaryActions = [];
+        let reactions = [];
+
+        try {
+          const traitsValue = document
+            .getElementById("creatureTraits")
+            .value.trim();
+          if (traitsValue) traits = JSON.parse(traitsValue);
+        } catch (e) {
+          alert("Invalid JSON format for Traits");
+          return;
+        }
+
+        try {
+          const actionsValue = document
+            .getElementById("creatureActions")
+            .value.trim();
+          if (actionsValue) actions = JSON.parse(actionsValue);
+        } catch (e) {
+          alert("Invalid JSON format for Actions");
+          return;
+        }
+
+        try {
+          const legendaryValue = document
+            .getElementById("creatureLegendaryActions")
+            .value.trim();
+          if (legendaryValue) legendaryActions = JSON.parse(legendaryValue);
+        } catch (e) {
+          alert("Invalid JSON format for Legendary Actions");
+          return;
+        }
+
+        try {
+          const reactionsValue = document
+            .getElementById("creatureReactions")
+            .value.trim();
+          if (reactionsValue) reactions = JSON.parse(reactionsValue);
+        } catch (e) {
+          alert("Invalid JSON format for Reactions");
+          return;
+        }
+
+        const creature = {
+          id: editingCreatureId || generateId(),
+          name: document.getElementById("creatureName").value,
+          type: document.getElementById("creatureType").value,
+          size: document.getElementById("creatureSize").value,
+          alignment: document.getElementById("creatureAlignment").value,
+          cr: document.getElementById("creatureCR").value,
+          xp: parseInt(document.getElementById("creatureXP").value) || 0,
+          ac: parseInt(document.getElementById("creatureAC").value),
+          acType: document.getElementById("creatureACType").value,
+          maxHp: parseInt(document.getElementById("creatureMaxHP").value),
+          hpFormula: document.getElementById("creatureHPFormula").value,
+          currentHp:
+            parseInt(document.getElementById("creatureCurrentHP").value) ||
+            parseInt(document.getElementById("creatureMaxHP").value),
+          initiative:
+            parseInt(document.getElementById("creatureInitiative").value) || 0,
+          speed: document.getElementById("creatureSpeed").value,
+          str: parseInt(document.getElementById("creatureSTR").value),
+          dex: parseInt(document.getElementById("creatureDEX").value),
+          con: parseInt(document.getElementById("creatureCON").value),
+          int: parseInt(document.getElementById("creatureINT").value),
+          wis: parseInt(document.getElementById("creatureWIS").value),
+          cha: parseInt(document.getElementById("creatureCHA").value),
+          saves: {
+            str: document.getElementById("creatureStrSave").value,
+            dex: document.getElementById("creatureDexSave").value,
+            con: document.getElementById("creatureConSave").value,
+            int: document.getElementById("creatureIntSave").value,
+            wis: document.getElementById("creatureWisSave").value,
+            cha: document.getElementById("creatureChaSave").value,
+          },
+          skills: document.getElementById("creatureSkills").value,
+          vulnerabilities: document.getElementById("creatureVulnerabilities")
+            .value,
+          resistances: document.getElementById("creatureResistances").value,
+          immunities: document.getElementById("creatureImmunities").value,
+          conditionImmunities: document.getElementById(
+            "creatureConditionImmunities"
+          ).value,
+          senses: document.getElementById("creatureSenses").value,
+          languages: document.getElementById("creatureLanguages").value,
+          traits: traits,
+          actions: actions,
+          legendaryActions: legendaryActions,
+          reactions: reactions,
+          notes: document.getElementById("creatureNotes").value,
+          isDead: false,
+        };
+
+        if (editingCreatureId) {
+          const index = encounter.creatures.findIndex(
+            (c) => c.id === editingCreatureId
+          );
+          if (index !== -1) {
+            creature.isDead = encounter.creatures[index].isDead;
+            encounter.creatures[index] = creature;
+          }
+        } else {
+          encounter.creatures.push(creature);
+        }
+
+        saveToLocalStorage();
+        closeCreatureModal();
+        renderContent();
+      }
+
+      function deleteCreature(id) {
+        if (!confirm("Delete this creature?")) return;
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        if (!encounter) return;
+        encounter.creatures = encounter.creatures.filter((c) => c.id !== id);
+        saveToLocalStorage();
+        renderContent();
+      }
+
+      function toggleDead(id) {
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        if (!encounter) return;
+        const creature = encounter.creatures.find((c) => c.id === id);
+        if (!creature) return;
+        creature.isDead = !creature.isDead;
+        saveToLocalStorage();
+        renderContent();
+      }
+
+      function adjustHP(id, amount) {
+        const encounter = encounters.find((e) => e.id === currentEncounterId);
+        if (!encounter) return;
+        const creature = encounter.creatures.find((c) => c.id === id);
+        if (!creature) return;
+        creature.currentHp = Math.max(
+          0,
+          Math.min(creature.maxHp, creature.currentHp + amount)
+        );
+        if (creature.currentHp === 0) creature.isDead = true;
+        saveToLocalStorage();
+        renderContent();
+      }
+
+      function applyQuickDamage(id) {
+        const input = document.getElementById(`damage-${id}`);
+        const value = parseInt(input.value);
+        if (isNaN(value) || value === 0) return;
+        adjustHP(id, -value);
+        input.value = "";
+      }
+
+      async function searchMonsters(query) {
+        const resultsDiv = document.getElementById("searchResults");
+        if (!query || query.length < 2) {
+          resultsDiv.classList.remove("active");
+          return;
+        }
+
+        if (searchTimeout) clearTimeout(searchTimeout);
+
+        searchTimeout = setTimeout(async () => {
+          try {
+            resultsDiv.innerHTML = '<div class="loading">🔍 Searching...</div>';
+            resultsDiv.classList.add("active");
+
+            const response = await fetch(
+              `https://www.dnd5eapi.co/api/monsters?name=${encodeURIComponent(
+                query
+              )}`
+            );
+            const data = await response.json();
+
+            if (data.results && data.results.length > 0) {
+              resultsDiv.innerHTML = data.results
+                .map(
+                  (monster) => `
+                            <div class="search-result-item" data-monster-index="${monster.index}">
+                                <span>${monster.name}</span>
+                            </div>
+                        `
+                )
+                .join("");
+
+              resultsDiv
+                .querySelectorAll(".search-result-item")
+                .forEach((item) => {
+                  item.addEventListener("click", () =>
+                    selectMonster(item.dataset.monsterIndex)
+                  );
+                });
+            } else {
+              resultsDiv.innerHTML =
+                '<div class="search-result-item">No results found</div>';
+            }
+          } catch (error) {
+            resultsDiv.innerHTML =
+              '<div class="search-result-item">Error searching monsters</div>';
+            console.error("Search error:", error);
+          }
+        }, 300);
+      }
+
+      async function selectMonster(index) {
+        const resultsDiv = document.getElementById("searchResults");
+        resultsDiv.innerHTML =
+          '<div class="loading">📥 Loading monster data...</div>';
+
+        try {
+          const response = await fetch(
+            `https://www.dnd5eapi.co/api/monsters/${index}`
+          );
+          const monster = await response.json();
+
+          // Basic info
+          document.getElementById("creatureName").value = monster.name || "";
+          document.getElementById("creatureType").value = monster.type || "";
+          document.getElementById("creatureSize").value = monster.size || "";
+          document.getElementById("creatureAlignment").value =
+            monster.alignment || "";
+          document.getElementById("creatureCR").value =
+            monster.challenge_rating || "0";
+          document.getElementById("creatureXP").value = monster.xp || "";
+
+          // AC
+          let acValue = 10;
+          let acType = "";
+          if (monster.armor_class && monster.armor_class.length > 0) {
+            acValue = monster.armor_class[0].value;
+            if (monster.armor_class[0].type) {
+              acType = monster.armor_class[0].type;
+            }
+            if (
+              monster.armor_class[0].armor &&
+              monster.armor_class[0].armor.length > 0
+            ) {
+              acType = monster.armor_class[0].armor
+                .map((a) => a.name)
+                .join(", ");
+            }
+          }
+          document.getElementById("creatureAC").value = acValue;
+          document.getElementById("creatureACType").value = acType;
+
+          // HP
+          document.getElementById("creatureMaxHP").value =
+            monster.hit_points || 1;
+          document.getElementById("creatureHPFormula").value =
+            monster.hit_points_roll || "";
+          document.getElementById("creatureCurrentHP").value =
+            monster.hit_points || 1;
+
+          // Speed
+          const speedParts = [];
+          if (monster.speed) {
+            for (const [key, value] of Object.entries(monster.speed)) {
+              if (key === "walk") {
+                speedParts.push(value);
+              } else {
+                speedParts.push(`${key} ${value}`);
+              }
+            }
+          }
+          document.getElementById("creatureSpeed").value =
+            speedParts.join(", ");
+
+          // Ability scores
+          document.getElementById("creatureSTR").value = monster.strength || 10;
+          document.getElementById("creatureDEX").value =
+            monster.dexterity || 10;
+          document.getElementById("creatureCON").value =
+            monster.constitution || 10;
+          document.getElementById("creatureINT").value =
+            monster.intelligence || 10;
+          document.getElementById("creatureWIS").value = monster.wisdom || 10;
+          document.getElementById("creatureCHA").value = monster.charisma || 10;
+
+          // Saving throws
+          const saves = {
+            str: "",
+            dex: "",
+            con: "",
+            int: "",
+            wis: "",
+            cha: "",
+          };
+          if (monster.proficiencies) {
+            monster.proficiencies.forEach((prof) => {
+              const profName = prof.proficiency?.name || "";
+              if (profName.includes("Saving Throw: STR"))
+                saves.str = `+${prof.value}`;
+              if (profName.includes("Saving Throw: DEX"))
+                saves.dex = `+${prof.value}`;
+              if (profName.includes("Saving Throw: CON"))
+                saves.con = `+${prof.value}`;
+              if (profName.includes("Saving Throw: INT"))
+                saves.int = `+${prof.value}`;
+              if (profName.includes("Saving Throw: WIS"))
+                saves.wis = `+${prof.value}`;
+              if (profName.includes("Saving Throw: CHA"))
+                saves.cha = `+${prof.value}`;
+            });
+          }
+          document.getElementById("creatureStrSave").value = saves.str;
+          document.getElementById("creatureDexSave").value = saves.dex;
+          document.getElementById("creatureConSave").value = saves.con;
+          document.getElementById("creatureIntSave").value = saves.int;
+          document.getElementById("creatureWisSave").value = saves.wis;
+          document.getElementById("creatureChaSave").value = saves.cha;
+
+          // Skills
+          const skills = [];
+          if (monster.proficiencies) {
+            monster.proficiencies.forEach((prof) => {
+              if (
+                prof.proficiency?.name &&
+                prof.proficiency.name.includes("Skill:")
+              ) {
+                const skillName = prof.proficiency.name.replace("Skill: ", "");
+                skills.push(`${skillName} +${prof.value}`);
+              }
+            });
+          }
+          document.getElementById("creatureSkills").value = skills.join(", ");
+
+          // Damage types
+          document.getElementById("creatureVulnerabilities").value =
+            monster.damage_vulnerabilities?.join(", ") || "";
+          document.getElementById("creatureResistances").value =
+            monster.damage_resistances?.join(", ") || "";
+          document.getElementById("creatureImmunities").value =
+            monster.damage_immunities?.join(", ") || "";
+          document.getElementById("creatureConditionImmunities").value =
+            monster.condition_immunities?.map((c) => c.name).join(", ") || "";
+
+          // Senses
+          const senses = [];
+          if (monster.senses) {
+            for (const [key, value] of Object.entries(monster.senses)) {
+              if (key !== "passive_perception") {
+                senses.push(`${key.replace("_", " ")} ${value}`);
+              }
+            }
+            if (monster.senses.passive_perception) {
+              senses.push(
+                `passive Perception ${monster.senses.passive_perception}`
+              );
+            }
+          }
+          document.getElementById("creatureSenses").value = senses.join(", ");
+
+          // Languages
+          document.getElementById("creatureLanguages").value =
+            monster.languages || "";
+
+          // Special abilities (traits)
+          const traits = [];
+          if (monster.special_abilities) {
+            monster.special_abilities.forEach((ability) => {
+              traits.push({
+                name: ability.name,
+                desc: ability.desc,
+              });
+            });
+          }
+          document.getElementById("creatureTraits").value =
+            traits.length > 0 ? JSON.stringify(traits, null, 2) : "";
+
+          // Actions
+          const actions = [];
+          if (monster.actions) {
+            monster.actions.forEach((action) => {
+              actions.push({
+                name: action.name,
+                desc: action.desc,
+              });
+            });
+          }
+          document.getElementById("creatureActions").value =
+            actions.length > 0 ? JSON.stringify(actions, null, 2) : "";
+
+          // Legendary actions
+          const legendaryActions = [];
+          if (monster.legendary_actions) {
+            monster.legendary_actions.forEach((action) => {
+              legendaryActions.push({
+                name: action.name,
+                desc: action.desc,
+              });
+            });
+          }
+          document.getElementById("creatureLegendaryActions").value =
+            legendaryActions.length > 0
+              ? JSON.stringify(legendaryActions, null, 2)
+              : "";
+
+          // Reactions
+          const reactions = [];
+          if (monster.reactions) {
+            monster.reactions.forEach((reaction) => {
+              reactions.push({
+                name: reaction.name,
+                desc: reaction.desc,
+              });
+            });
+          }
+          document.getElementById("creatureReactions").value =
+            reactions.length > 0 ? JSON.stringify(reactions, null, 2) : "";
+
+          // Calculate initiative
+          const dexMod = Math.floor((monster.dexterity - 10) / 2);
+          document.getElementById("creatureInitiative").value =
+            Math.floor(Math.random() * 20) + 1 + dexMod;
+
+          resultsDiv.classList.remove("active");
+        } catch (error) {
+          alert("Error loading monster data from API");
+          console.error("API error:", error);
+          resultsDiv.classList.remove("active");
+        }
+      }
+
+      function saveToLocalStorage() {
+        localStorage.setItem("dndEncounters", JSON.stringify(encounters));
+      }
+
+      function loadFromLocalStorage() {
+        const data = localStorage.getItem("dndEncounters");
+        if (data) {
+          try {
+            encounters = JSON.parse(data);
+          } catch (e) {
+            console.error("Error loading from localStorage:", e);
+            encounters = [];
+          }
+        }
+      }
+
+      function changeTheme(theme) {
+        document.documentElement.setAttribute("data-theme", theme);
+        localStorage.setItem("theme", theme);
+      }
+
+      function loadTheme() {
+        const savedTheme = localStorage.getItem("theme") || "dark";
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        document.getElementById("themeSelect").value = savedTheme;
+      }
+
+      function exportData() {
+        const dataStr = JSON.stringify(encounters, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "dnd-encounters.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      function importData() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "application/json";
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const imported = JSON.parse(event.target.result);
+              if (
+                confirm("This will replace all current encounters. Continue?")
+              ) {
+                encounters = imported;
+                saveToLocalStorage();
+                currentEncounterId = null;
+                renderEncounterList();
+                renderContent();
+                alert("Import successful!");
+              }
+            } catch (error) {
+              alert("Error importing file: Invalid JSON format");
+              console.error("Import error:", error);
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
