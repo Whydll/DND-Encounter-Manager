@@ -6,6 +6,8 @@ D&D Encounter Manager is a modern, browser-based combat tracking tool designed f
 
 All your data is stored securely in your browser's local storage (LocalStorage), ensuring your progress is not lost when you refresh or close the page.
 
+### You can use it from [here.](https://whydll.github.io/DND-Encounter-Manager/)
+
 ## 🚀 Key Features
 
 * **Encounter Management:**
